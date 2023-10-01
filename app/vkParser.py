@@ -1,9 +1,10 @@
-import requests
-import httpx
-
 from pprint import pprint
 from selenium import webdriver
-from typing import List
+
+import httpx
+
+
+from app.models.VkAuthResponce import VkAuthResponce
 
 LIMITS = httpx.Limits(max_connections=5, max_keepalive_connections=5)
 CLIENT = httpx.Client(limits=LIMITS)
@@ -13,10 +14,9 @@ class VK_Parser:
     def __init__(self, client_id, app_state):
         self.app_state = app_state
         self.client_id = client_id
-        self.user_id = "-1"
-        self.user_token = "-1"
+        self.user_auth_data = None
 
-    def auth(self) -> bool:
+    def auth(self) -> VkAuthResponce:
         """
         Производит авторизацию посредством OAuth. Возвращает булево значение - успешна-ли авторизация или нет.
         Если успешна - данные сохраняются в экземпляре класса в полях user_id и user_token
@@ -34,49 +34,27 @@ class VK_Parser:
             if driver.current_url.startswith(
                 "https://oauth.vk.com/blank.html"
             ):
-                self.user_token = (
+                self.user_auth_data = VkAuthResponce(
                     driver.current_url.split("#")[1]
                     .split("&")[0]
-                    .split("=")[1]
-                )
-                self.user_id = (
+                    .split("=")[1],
+                    driver.current_url.split("#")[1]
+                    .split("&")[1]
+                    .split("=")[1],
                     driver.current_url.split("#")[1]
                     .split("&")[-1]
-                    .split("=")[1]
+                    .split("=")[1],
                 )
                 driver.minimize_window()
                 return True
             return False
         except:
-            self.user_id = "-1"
-            self.user_token = "-1"
+            self.user_auth_data = None
             return False
 
     def logout(self):
-        self.user_id = "-1"
-        self.user_token = "-1"
+        self.user_auth_data = None
         return True
-
-    def retreive_posts(self, token: str, group_ids: List) -> List:
-        count = 100
-
-        for group_id in group_ids:
-            api_url = f"https://api.vk.com/method/wall.get?owner_id=-{group_id}&count={count}&access_token={token}&v=5.131"
-            response = requests.get(api_url)
-            data = response.json()
-
-            if "response" in data:
-                posts = data["response"]["items"]
-                for post in posts:
-                    # Extract relevant information from each post
-                    post_id = post["id"]
-                    text = post["text"]
-                    # ... extract other fields as needed
-                    print(f"Post ID: {post_id}")
-                    print(f"Text: {text}")
-                    print("---")
-            else:
-                print("Error occurred while retrieving posts.")
 
     async def parse(self, publics_data, persons_data):
         ids = list(
@@ -95,7 +73,7 @@ class VK_Parser:
         temp_result = {}
         try:
             for owner_id in ids:
-                api_url = f"https://api.vk.com/method/wall.get?owner_id={owner_id}&count=100&access_token={self.user_token}&v=5.131"
+                api_url = f"https://api.vk.com/method/wall.get?owner_id={owner_id}&count=100&access_token={self.user_auth_data.token}&v=5.131"
                 response = CLIENT.get(api_url).json()
                 temp_result[owner_id] = list(
                     map(lambda x: x["text"], response["response"]["items"])
