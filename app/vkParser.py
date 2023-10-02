@@ -17,7 +17,7 @@ class VK_Parser:
         self.client_id = client_id
         self.user_auth_data = None
 
-    def auth(self) -> VkAuthResponce:
+    def auth(self) -> VkAuthResponce | None:
         """
         Производит авторизацию посредством OAuth. Возвращает булево значение - успешна-ли авторизация или нет.
         Если успешна - данные сохраняются в экземпляре класса в полях user_id и user_token
@@ -78,18 +78,18 @@ class VK_Parser:
                 api_url = f"https://api.vk.com/method/wall.get?owner_id={owner_id}&count=100&access_token={self.user_auth_data.token}&v=5.131"
                 response = CLIENT.get(api_url).json()
                 if tokens:
-                    temp_result[owner_id] = list(
-                        filter(
-                            lambda x: len(
-                                set(map(str.lower, x)).intersection(tokens)
-                            )
-                            > 0,
-                            map(
-                                lambda x: x["text"],
-                                response["response"]["items"],
-                            ),
-                        )
+                    temp_result[owner_id] = []
+                    texts = map(
+                        lambda x: x["text"],
+                        response["response"]["items"],
                     )
+
+                    for text in texts:
+                        for token in tokens:
+                            if token in text.lower():
+                                temp_result[owner_id].append(text)
+                                break
+
                 else:
                     temp_result[owner_id] = list(
                         map(lambda x: x["text"], response["response"]["items"])

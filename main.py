@@ -1,10 +1,10 @@
 import flet as ft
 from app.MainViewModel import MainViewModel
-from app.settings import FLET_VIEW
+from app.settings import FletView
 
 view_model = MainViewModel()
 
-SELECTED_FLET_VIEW = FLET_VIEW["APP"]
+SELECTED_FLET_VIEW = FletView.app
 
 
 def setup_page(page: ft.Page):
@@ -44,7 +44,18 @@ async def main(page: ft.Page):
 
     async def add_public(_):
         if view_model.check_public_link(add_public_text_input.value):
-            public_list.controls.append(ft.Text(add_public_text_input.value))
+            public_list.controls.append(
+                ft.Row(
+                    [
+                        ft.Text(add_public_text_input.value, expand=True),
+                        ft.IconButton(
+                            ft.icons.DELETE_OUTLINE,
+                            tooltip="Удалить запись",
+                            on_click=delete_public_clicked,
+                        ),
+                    ]
+                )
+            )
             add_public_text_input.value = ""
         else:
             add_public_text_input.border_color = ft.colors.RED
@@ -52,14 +63,39 @@ async def main(page: ft.Page):
             incorrect_dialog.open = True
         await page.update_async()
 
+    async def delete_public_clicked(marker):
+        for line in public_list.controls:
+            if line.controls[1] == marker.control:
+                public_list.controls.remove(line)
+                break
+        await page.update_async()
+
     async def add_person(_):
         if view_model.check_person_link(add_person_text_input.value):
-            person_list.controls.append(ft.Text(add_person_text_input.value))
+            person_list.controls.append(
+                ft.Row(
+                    [
+                        ft.Text(add_person_text_input.value, expand=True),
+                        ft.IconButton(
+                            ft.icons.DELETE_OUTLINE,
+                            tooltip="Удалить запись",
+                            on_click=delete_person_clicked,
+                        ),
+                    ]
+                )
+            )
             add_person_text_input.value = ""
         else:
             add_person_text_input.border_color = ft.colors.RED
             page.dialog = incorrect_dialog
             incorrect_dialog.open = True
+        await page.update_async()
+
+    async def delete_person_clicked(marker):
+        for line in public_list.controls:
+            if line.controls[1] == marker.control:
+                person_list.controls.remove(line)
+                break
         await page.update_async()
 
     async def reset_add_public_text_border(_):
@@ -72,14 +108,23 @@ async def main(page: ft.Page):
 
     async def start_parsing(_):
         if view_model.user_authorized():
-            publics_data = list(map(lambda x: x.value, public_list.controls))
-            persons_data = list(map(lambda x: x.value, person_list.controls))
+            publics_data = list(
+                map(lambda x: x.controls[0].value, public_list.controls)
+            )
+            persons_data = list(
+                map(lambda x: x.controls[0].value, person_list.controls)
+            )
+            tokens_data = list(
+                map(lambda x: x.controls[0].value, token_list.controls)
+            )
 
             if publics_data or persons_data:
                 button_start_parse.disabled = True
                 progress_bar.value = None
 
-                await view_model.start_parse(publics_data, persons_data)
+                await view_model.start_parse(
+                    publics_data, persons_data, tokens_data
+                )
 
                 progress_bar.value = 0
                 button_reset_parsed.disabled = False
@@ -105,8 +150,26 @@ async def main(page: ft.Page):
         await page.update_async()
 
     async def add_token_click(_):
-        token_list.controls.append(ft.Text(add_token_text_input.value))
+        token_list.controls.append(
+            ft.Row(
+                [
+                    ft.Text(add_token_text_input.value, expand=True),
+                    ft.IconButton(
+                        ft.icons.DELETE_OUTLINE,
+                        tooltip="Удалить токен",
+                        on_click=delete_token_clicked,
+                    ),
+                ]
+            )
+        )
         add_token_text_input.value = ""
+        await page.update_async()
+
+    async def delete_token_clicked(marker):
+        for line in token_list.controls:
+            if line.controls[1] == marker.control:
+                token_list.controls.remove(line)
+                break
         await page.update_async()
 
     # Элементы боковой секции
@@ -153,7 +216,7 @@ async def main(page: ft.Page):
     add_public_text_input = ft.TextField(
         value="",
         text_align=ft.TextAlign.RIGHT,
-        hint_text="Ссылка на сообщество вида https://vk.com/public12345678",
+        hint_text="Ссылка вида https://vk.com/public12345678",
         on_change=reset_add_public_text_border,
     )
     add_public_button = ft.TextButton(
@@ -164,7 +227,7 @@ async def main(page: ft.Page):
     add_person_text_input = ft.TextField(
         value="",
         text_align=ft.TextAlign.RIGHT,
-        hint_text="Ссылка на пользователя вида https://vk.com/id12345678",
+        hint_text="Ссылка вида https://vk.com/id12345678",
         on_change=reset_add_person_text_border,
     )
     add_person_button = ft.TextButton(
@@ -298,58 +361,6 @@ async def main(page: ft.Page):
             height=800,
         )
     )
-
-    # await page.add_async(
-    #     ft.Row(
-    #         [
-    #             side_menu,
-    #             ft.VerticalDivider(width=1),
-    #             ft.Column(
-    #                 [
-    #                     ft.Row(
-    #                         [main_header, button_regvk],
-    #                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-    #                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
-    #                     ),
-    #                     ft.Row(
-    #                         [
-    #                             ft.Column(
-    #                                 [
-    #                                     add_public_header,
-    #                                     public_list,
-    #                                     add_public_text_input,
-    #                                     add_public_button,
-    #                                 ],
-    #                                 expand=1,
-    #                             ),
-    #                             ft.Column(
-    #                                 [
-    #                                     add_person_header,
-    #                                     person_list,
-    #                                     add_person_text_input,
-    #                                     add_person_button,
-    #                                 ],
-    #                                 expand=1,
-    #                             ),
-    #                         ],
-    #                         alignment=ft.MainAxisAlignment.END,
-    #                     ),
-    #                     ft.Row(
-    #                         [
-    #                             button_start_parse,
-    #                             button_reset_parsed,
-    #                             button_save_parsed,
-    #                         ],
-    #                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-    #                         expand=True,
-    #                     ),
-    #                     progress_bar,
-    #                 ]
-    #             ),
-    #         ],
-    #         alignment=ft.MainAxisAlignment.CENTER,
-    #     )
-    # )
 
 
 ft.app(target=main, view=SELECTED_FLET_VIEW)

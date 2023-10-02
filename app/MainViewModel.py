@@ -8,7 +8,7 @@ import webbrowser
 from datetime import datetime
 from typing import List
 
-from app.settings import CLIENT_ID, APP_STATE, FLET_VIEW
+from app.settings import CLIENT_ID, APP_STATE, FletView
 from app.vkParser import VK_Parser
 
 from app.models.VkAuthResponce import VkAuthResponce
@@ -26,10 +26,10 @@ class MainViewModel:
         self._temp_data = None
 
     async def auth(self) -> VkAuthResponce | None:
-        credentials = self.parser.user_auth_data
-        if credentials:
-            self.user_state.logged_in()
-            return credentials
+        if self.parser.auth():
+            if self.parser.user_auth_data.user_id is not None:
+                self.user_state.logged_in()
+                return self.parser.user_auth_data
 
     async def logout(self):
         if self.parser.logout():
@@ -40,7 +40,7 @@ class MainViewModel:
         return self.user_state
 
     def user_authorized(self) -> bool:
-        return isinstance(self.user_state, UserAuthorizedState)
+        return isinstance(self.user_state(), UserAuthorizedState)
 
     async def start_parse(
         self, publics: List[str], persons: List[str], tokens: List[str] = []
@@ -62,7 +62,7 @@ class MainViewModel:
             encoding="utf-8",
         ) as fp:
             json.dump(self._temp_data, fp, ensure_ascii=False)
-        if flet_view == FLET_VIEW["APP"]:
+        if flet_view == FletView.app:
             __path = os.path.normpath(__path)
             FILEBROWSER_PATH = os.path.join(
                 os.getenv("WINDIR"), "explorer.exe"
@@ -73,7 +73,7 @@ class MainViewModel:
                 subprocess.run(
                     [FILEBROWSER_PATH, "/select,", __path], check=False
                 )
-        elif flet_view == FLET_VIEW["BROWSER"]:
+        elif flet_view == FletView.browser:
             __page_path = sys.path[0].replace("\\", "/") + "/link.html"
             with open(__page_path, "w", encoding="utf-8") as f:
                 print(
