@@ -4,15 +4,18 @@ from app.settings import FLET_VIEW
 
 view_model = MainViewModel()
 
-SELECTED_FLET_VIEW = FLET_VIEW["BROWSER"]
+SELECTED_FLET_VIEW = FLET_VIEW["APP"]
 
 
-def setup_page(page):
+def setup_page(page: ft.Page):
     page.title = "ПостоМайнер"
     page.vertical_alignment = ft.MainAxisAlignment.START
 
     page.window_min_width = 1200
-    page.window_min_height = 400
+    page.window_min_height = 850
+
+    page.window_width = 1200
+    page.window_height = 850
 
 
 async def main(page: ft.Page):
@@ -101,6 +104,11 @@ async def main(page: ft.Page):
         view_model.save_data(SELECTED_FLET_VIEW)
         await page.update_async()
 
+    async def add_token_click(_):
+        token_list.controls.append(ft.Text(add_token_text_input.value))
+        add_token_text_input.value = ""
+        await page.update_async()
+
     # Элементы боковой секции
     auth_button = ft.FloatingActionButton(
         icon=ft.icons.LOCK_ROUNDED,
@@ -141,9 +149,7 @@ async def main(page: ft.Page):
     main_header = ft.Text("Источники данных", size=40)
 
     add_public_header = ft.Text("Сообщества", size=28)
-    public_list = ft.ListView(
-        expand=1, spacing=10, padding=20, auto_scroll=True
-    )
+    public_list = ft.ListView(height=250, auto_scroll=True)
     add_public_text_input = ft.TextField(
         value="",
         text_align=ft.TextAlign.RIGHT,
@@ -154,9 +160,7 @@ async def main(page: ft.Page):
         text="Добавить сообщество", icon=ft.icons.ADD, on_click=add_public
     )
     add_person_header = ft.Text("Пользователи", size=28)
-    person_list = ft.ListView(
-        expand=1, spacing=10, padding=20, auto_scroll=True
-    )
+    person_list = ft.ListView(height=250, auto_scroll=True)
     add_person_text_input = ft.TextField(
         value="",
         text_align=ft.TextAlign.RIGHT,
@@ -166,6 +170,27 @@ async def main(page: ft.Page):
     add_person_button = ft.TextButton(
         text="Добавить пользователя", icon=ft.icons.ADD, on_click=add_person
     )
+
+    # Токены
+    add_token_header = ft.Text("Искомые токены", size=28)
+    token_list = ft.ListView(
+        height=200,
+        spacing=10,
+        padding=20,
+        auto_scroll=True,
+    )
+    add_token_text_input = ft.TextField(
+        value="",
+        text_align=ft.TextAlign.RIGHT,
+        hint_text="Токен - искомое слово",
+    )
+    add_token_button = ft.TextButton(
+        text="Добавить токен",
+        icon=ft.icons.ADD,
+        on_click=add_token_click,
+    )
+
+    # Нижняя панель
     button_start_parse = ft.TextButton(
         text="Запуск сбора данных",
         icon=ft.icons.CLOUD_UPLOAD_ROUNDED,
@@ -189,61 +214,142 @@ async def main(page: ft.Page):
         on_click=lambda e: view_model.button_regvk_click(),
     )
 
+    persons_publics_section = ft.Row(
+        controls=[
+            ft.Column(
+                controls=[
+                    add_public_header,
+                    ft.Container(
+                        public_list,
+                        bgcolor=ft.colors.WHITE30,
+                        border_radius=10,
+                    ),
+                    add_public_text_input,
+                    add_public_button,
+                ],
+                expand=1,
+            ),
+            ft.Column(
+                controls=[
+                    add_person_header,
+                    ft.Container(
+                        person_list,
+                        bgcolor=ft.colors.WHITE30,
+                        border_radius=10,
+                    ),
+                    add_person_text_input,
+                    add_person_button,
+                ],
+                expand=1,
+            ),
+        ],
+        alignment=ft.MainAxisAlignment.END,
+    )
+
+    footer_buttons = ft.Row(
+        [
+            button_start_parse,
+            button_reset_parsed,
+            button_save_parsed,
+        ],
+        alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+        expand=True,
+    )
+
+    token_section = ft.Row(
+        controls=[
+            ft.Column(
+                controls=[
+                    ft.Container(
+                        token_list,
+                        bgcolor=ft.colors.WHITE30,
+                        border_radius=10,
+                    )
+                ],
+                expand=3,
+            ),
+            ft.Column(
+                controls=[add_token_text_input, add_token_button],
+                expand=2,
+                horizontal_alignment=ft.CrossAxisAlignment.END,
+            ),
+        ]
+    )
+
+    main_menu = ft.Column(
+        controls=[
+            ft.Row(
+                [main_header, button_regvk],
+                alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+                vertical_alignment=ft.CrossAxisAlignment.CENTER,
+            ),
+            persons_publics_section,
+            add_token_header,
+            token_section,
+            footer_buttons,
+            progress_bar,
+        ],
+        expand=True,
+    )
+
     await page.add_async(
         ft.Row(
-            [
-                side_menu,
-                ft.VerticalDivider(width=1),
-                ft.Column(
-                    [
-                        ft.Row(
-                            [main_header, button_regvk],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                            vertical_alignment=ft.CrossAxisAlignment.CENTER,
-                        ),
-                        ft.Row(
-                            [
-                                ft.Column(
-                                    [
-                                        add_public_header,
-                                        public_list,
-                                        add_public_text_input,
-                                        add_public_button,
-                                    ],
-                                    expand=True,
-                                ),
-                                ft.Column(
-                                    [
-                                        add_person_header,
-                                        person_list,
-                                        add_person_text_input,
-                                        add_person_button,
-                                    ],
-                                    expand=True,
-                                ),
-                            ],
-                            alignment=ft.MainAxisAlignment.END,
-                            expand=True,
-                        ),
-                        ft.Row(
-                            [
-                                button_start_parse,
-                                button_reset_parsed,
-                                button_save_parsed,
-                            ],
-                            alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
-                        ),
-                        progress_bar,
-                    ],
-                    alignment=ft.MainAxisAlignment.START,
-                    expand=True,
-                ),
-            ],
-            alignment=ft.MainAxisAlignment.CENTER,
+            controls=[side_menu, ft.VerticalDivider(width=1), main_menu],
             height=800,
-            expand=True,
         )
     )
+
+    # await page.add_async(
+    #     ft.Row(
+    #         [
+    #             side_menu,
+    #             ft.VerticalDivider(width=1),
+    #             ft.Column(
+    #                 [
+    #                     ft.Row(
+    #                         [main_header, button_regvk],
+    #                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    #                         vertical_alignment=ft.CrossAxisAlignment.CENTER,
+    #                     ),
+    #                     ft.Row(
+    #                         [
+    #                             ft.Column(
+    #                                 [
+    #                                     add_public_header,
+    #                                     public_list,
+    #                                     add_public_text_input,
+    #                                     add_public_button,
+    #                                 ],
+    #                                 expand=1,
+    #                             ),
+    #                             ft.Column(
+    #                                 [
+    #                                     add_person_header,
+    #                                     person_list,
+    #                                     add_person_text_input,
+    #                                     add_person_button,
+    #                                 ],
+    #                                 expand=1,
+    #                             ),
+    #                         ],
+    #                         alignment=ft.MainAxisAlignment.END,
+    #                     ),
+    #                     ft.Row(
+    #                         [
+    #                             button_start_parse,
+    #                             button_reset_parsed,
+    #                             button_save_parsed,
+    #                         ],
+    #                         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
+    #                         expand=True,
+    #                     ),
+    #                     progress_bar,
+    #                 ]
+    #             ),
+    #         ],
+    #         alignment=ft.MainAxisAlignment.CENTER,
+    #     )
+    # )
 
 
 ft.app(target=main, view=SELECTED_FLET_VIEW)

@@ -42,8 +42,10 @@ class MainViewModel:
     def user_authorized(self) -> bool:
         return isinstance(self.user_state, UserAuthorizedState)
 
-    async def start_parse(self, publics: List[str], persons: List[str]):
-        self._temp_data = await self.parser.parse(publics, persons)
+    async def start_parse(
+        self, publics: List[str], persons: List[str], tokens: List[str] = []
+    ):
+        self._temp_data = await self.parser.parse(publics, persons, tokens)
 
     def reset_data(self):
         self._temp_data = None

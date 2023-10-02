@@ -1,5 +1,6 @@
 from pprint import pprint
 from selenium import webdriver
+from typing import List
 
 import httpx
 
@@ -56,7 +57,8 @@ class VK_Parser:
         self.user_auth_data = None
         return True
 
-    async def parse(self, publics_data, persons_data):
+    async def parse(self, publics_data, persons_data, tokens: List[str] = []):
+        tokens = set(map(str.lower, tokens))
         ids = list(
             map(lambda x: x.replace("https://vk.com/id", ""), persons_data)
         )
@@ -75,10 +77,23 @@ class VK_Parser:
             for owner_id in ids:
                 api_url = f"https://api.vk.com/method/wall.get?owner_id={owner_id}&count=100&access_token={self.user_auth_data.token}&v=5.131"
                 response = CLIENT.get(api_url).json()
-                temp_result[owner_id] = list(
-                    map(lambda x: x["text"], response["response"]["items"])
-                )
-            print(temp_result)
+                if tokens:
+                    temp_result[owner_id] = list(
+                        filter(
+                            lambda x: len(
+                                set(map(str.lower, x)).intersection(tokens)
+                            )
+                            > 0,
+                            map(
+                                lambda x: x["text"],
+                                response["response"]["items"],
+                            ),
+                        )
+                    )
+                else:
+                    temp_result[owner_id] = list(
+                        map(lambda x: x["text"], response["response"]["items"])
+                    )
             return temp_result
         except Exception as e:
             pprint(e)
