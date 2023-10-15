@@ -2,6 +2,7 @@ from pprint import pprint
 from selenium import webdriver
 from typing import List
 
+import pandas as pd
 import httpx
 
 
@@ -57,7 +58,10 @@ class VK_Parser:
         self.user_auth_data = None
         return True
 
-    async def parse(self, publics_data, persons_data, tokens: List[str] = []):
+    async def parse(
+        self, publics_data, persons_data, tokens: List[str] = []
+    ) -> pd.DataFrame:
+        publics_data = set(map(str.lower, publics_data))
         tokens = set(map(str.lower, tokens))
         ids = list(
             map(lambda x: x.replace("https://vk.com/id", ""), persons_data)
@@ -72,28 +76,45 @@ class VK_Parser:
                 )
             )
         )
-        temp_result = {}
+        temp_result = pd.DataFrame(columns=["owner_id", "text"])
         try:
             for owner_id in ids:
                 api_url = f"https://api.vk.com/method/wall.get?owner_id={owner_id}&count=100&access_token={self.user_auth_data.token}&v=5.131"
-                response = CLIENT.get(api_url).json()
+                _resp = CLIENT.get(api_url).json()
                 if tokens:
-                    temp_result[owner_id] = []
                     texts = map(
                         lambda x: x["text"],
-                        response["response"]["items"],
+                        _resp["response"]["items"],
                     )
 
                     for text in texts:
                         for token in tokens:
                             if token in text.lower():
-                                temp_result[owner_id].append(text)
+                                temp_result = pd.concat(
+                                    [
+                                        temp_result,
+                                        pd.DataFrame(
+                                            [[owner_id, text]],
+                                            columns=temp_result.columns,
+                                        ),
+                                    ],
+                                )
                                 break
 
                 else:
-                    temp_result[owner_id] = list(
-                        map(lambda x: x["text"], response["response"]["items"])
-                    )
+                    for text in map(
+                        lambda x: x["text"], _resp["response"]["items"]
+                    ):
+                        temp_result = pd.concat(
+                            [
+                                temp_result,
+                                pd.DataFrame(
+                                    [[owner_id, text]],
+                                    columns=temp_result.columns,
+                                ),
+                            ],
+                        )
+
             return temp_result
         except Exception as e:
             pprint(e)

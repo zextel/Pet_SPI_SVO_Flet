@@ -5,6 +5,10 @@ import subprocess
 import sys
 import webbrowser
 
+import pandas as pd
+import pyarrow as pa
+import pyarrow.parquet as pq
+
 from datetime import datetime
 from typing import List
 
@@ -43,36 +47,40 @@ class MainViewModel:
         return isinstance(self.user_state(), UserAuthorizedState)
 
     async def start_parse(
-        self, publics: List[str], persons: List[str], tokens: List[str] = []
+        self,
+        publics: List[str],
+        persons: List[str],
+        tokens: List[str] = [],
     ):
         self._temp_data = await self.parser.parse(publics, persons, tokens)
 
     def reset_data(self):
         self._temp_data = None
 
-    def save_data(self, flet_view):
-        __path = (
-            sys.path[0].replace("\\", "/")
-            + f"/Выгрузка - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}.json"
+    def save_data(self, flet_view, _dtype="parquet"):
+        __filename = (
+            f"/Выгрузка - {datetime.now().strftime('%d-%m-%Y %H-%M-%S')}"
         )
-        print(__path)
-        with open(
-            __path,
-            "w",
-            encoding="utf-8",
-        ) as fp:
-            json.dump(self._temp_data, fp, ensure_ascii=False)
+        __path = sys.path[0].replace("\\", "/") + __filename
+
+        match _dtype.lower():
+            case "json":
+                __path = os.path.normpath(__path) + ".json"
+                self._temp_data.to_json(__path)
+            case "parquet":
+                __path = os.path.normpath(__path) + ".parquet"
+                table = pa.Table.from_pandas(self._temp_data)
+                pq.write_table(table=table, where=__path)
+            case "csv":
+                __path = os.path.normpath(__path) + ".csv"
+                self._temp_data.to_csv(__path)
+            case _:
+                return
+
         if flet_view == FletView.app:
-            __path = os.path.normpath(__path)
-            FILEBROWSER_PATH = os.path.join(
-                os.getenv("WINDIR"), "explorer.exe"
-            )
-            if os.path.isdir(__path):
-                subprocess.run([FILEBROWSER_PATH, __path], check=False)
-            elif os.path.isfile(__path):
-                subprocess.run(
-                    [FILEBROWSER_PATH, "/select,", __path], check=False
-                )
+            EXPLORER_PATH = os.path.join(os.getenv("WINDIR"), "explorer.exe")
+            subprocess.run([EXPLORER_PATH, "/select,", __path], check=False)
+
         elif flet_view == FletView.browser:
             __page_path = sys.path[0].replace("\\", "/") + "/link.html"
             with open(__page_path, "w", encoding="utf-8") as f:

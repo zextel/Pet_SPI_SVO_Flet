@@ -4,7 +4,7 @@ from app.settings import FletView
 
 view_model = MainViewModel()
 
-SELECTED_FLET_VIEW = FletView.app
+SELECTED_FLET_VIEW = FletView.browser
 
 
 def setup_page(page: ft.Page):
@@ -22,6 +22,8 @@ async def main(page: ft.Page):
     setup_page(page)
 
     async def vk_auth(_):
+        auth_button.text = "Открываем VK"
+        await page.update_async()
         credentials = await view_model.auth()
         if credentials is not None:
             auth_button.text = "Авторизован - id" + credentials.user_id
@@ -128,7 +130,9 @@ async def main(page: ft.Page):
 
                 progress_bar.value = 0
                 button_reset_parsed.disabled = False
-                button_save_parsed.disabled = False
+                button_save_as_json.disabled = False
+                button_save_as_parquet.disabled = False
+                button_save_as_csv.disabled = False
             else:
                 page.dialog = empty_dialog
                 empty_dialog.open = True
@@ -142,11 +146,21 @@ async def main(page: ft.Page):
         view_model.reset_data()
         button_start_parse.disabled = False
         button_reset_parsed.disabled = True
-        button_save_parsed.disabled = True
+        button_save_as_json.disabled = True
+        button_save_as_parquet.disabled = True
+        button_save_as_csv.disabled = True
         await page.update_async()
 
-    async def save_parsed(_):
-        view_model.save_data(SELECTED_FLET_VIEW)
+    async def save_as_json(_):
+        view_model.save_data(SELECTED_FLET_VIEW, "json")
+        await page.update_async()
+
+    async def save_as_parquet(_):
+        view_model.save_data(SELECTED_FLET_VIEW, "parquet")
+        await page.update_async()
+
+    async def save_as_csv(_):
+        view_model.save_data(SELECTED_FLET_VIEW, "csv")
         await page.update_async()
 
     async def add_token_click(_):
@@ -265,12 +279,25 @@ async def main(page: ft.Page):
         disabled=True,
         on_click=reset_parsed,
     )
-    button_save_parsed = ft.TextButton(
-        text="Сохранить сообщения",
+    button_save_as_json = ft.TextButton(
+        text="Сохранить в JSON",
         icon=ft.icons.SAVE_AS_ROUNDED,
         disabled=True,
-        on_click=save_parsed,
+        on_click=save_as_json,
     )
+    button_save_as_parquet = ft.TextButton(
+        text="Сохранить в Parquet",
+        icon=ft.icons.SAVE_AS_ROUNDED,
+        disabled=True,
+        on_click=save_as_parquet,
+    )
+    button_save_as_csv = ft.TextButton(
+        text="Сохранить в CSV",
+        icon=ft.icons.SAVE_AS_ROUNDED,
+        disabled=True,
+        on_click=save_as_csv,
+    )
+
     button_regvk = ft.TextButton(
         text=r"Помощник в определении ID страницы\пользователя",
         icon=ft.icons.ADS_CLICK_ROUNDED,
@@ -313,7 +340,9 @@ async def main(page: ft.Page):
         [
             button_start_parse,
             button_reset_parsed,
-            button_save_parsed,
+            button_save_as_json,
+            button_save_as_parquet,
+            button_save_as_csv,
         ],
         alignment=ft.MainAxisAlignment.SPACE_BETWEEN,
         expand=True,
